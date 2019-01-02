@@ -13,30 +13,25 @@ matrix:
 
 addons:
   homebrew:
-    update: true
     packages:
       - libuv
-
-before_script:
-  - echo "Using tag $TRAVIS_TAG"
-  - if [[ "$TRAVIS_TAG" == "" ]]; then export TAGNAME="nightly" && export NIGHTLY="-nightly" ; else export TAGNAME="$TRAVIS_TAG" && export NIGHTLY="" ; fi
-  - echo "TAGNAME $TAGNAME NIGHTLY $NIGHTLY"
-  - git submodule init ; git submodule update
 
 script:
   - mkdir build
   - cd build
-  - cmake .. && make -j4
+  - cmake -DSTATIC_LINKING=ON .. && make -j4
 
-# deploy:
-#   skip_cleanup: true
-#   provider: releases
-#   draft: false
-#   prerelease: true
-#   api_key:
-#     secure: 123
-#   file:
-#     - "${FILE_TO_UPLOAD}"
-#   on:
-#     all_branches: true
-#     tags: true
+after_success:
+  - zip lan-play-macos.zip lan-play
+
+deploy:
+  skip_cleanup: true
+  provider: releases
+  draft: false
+  prerelease: true
+  api_key: $GITHUB_TOKEN
+  file:
+    - "lan-play-macos.zip"
+  on:
+    all_branches: true
+    tags: true

@@ -35,6 +35,26 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_definitions(-DLANPLAY_ANDROID)
 endif()
 
+set(SOURCE_FILES
+    base/debug.c
+    base/llog.c
+
+    src/main.c
+    src/packet.c
+    src/arp.c
+    src/helper.c
+    src/lan-client.c
+    src/gateway.c
+    src/proxy.c
+    src/ipv4/ipv4.c
+    src/ipv4/tcp.c
+    src/ipv4/udp.c
+    src/ipv4/icmp.c
+
+    src/uv_lwip.c
+)
+add_executable(lan-play ${SOURCE_FILES})
+
 include_directories(
     lan-play
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -43,6 +63,7 @@ include_directories(
     src
 )
 add_subdirectory(lwip)
+target_link_libraries(lan-play lwip_lib)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 if (WIN32)
@@ -67,28 +88,6 @@ find_package(Libuv)
 if (LIBUV_FOUND)
     include_directories(${LIBUV_INCLUDE_DIR})
 endif()
-
-set(SOURCE_FILES
-    base/debug.c
-    base/llog.c
-
-    src/main.c
-    src/packet.c
-    src/arp.c
-    src/helper.c
-    src/lan-client.c
-    src/gateway.c
-    src/proxy.c
-    src/ipv4/ipv4.c
-    src/ipv4/tcp.c
-    src/ipv4/udp.c
-    src/ipv4/icmp.c
-
-    src/uv_lwip.c
-)
-
-add_executable(lan-play ${SOURCE_FILES})
-target_link_libraries(lan-play lwip_lib)
 
 if (STATIC_LINKING)
     target_link_libraries(lan-play ${PCAP_LIBRARY} ${LIBUV_LIBRARIES} -static)
