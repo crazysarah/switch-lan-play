@@ -24,6 +24,7 @@ if (BIG_ENDIAN)
 else ()
     add_definitions(-DLANPLAY_LITTLE_ENDIAN)
 endif ()
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_definitions(-DLANPLAY_LINUX)
 elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -36,7 +37,6 @@ endif()
 
 include_directories(
     lan-play
-    ${PCAP_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     lwip/custom
     lwip/src/include
@@ -44,21 +44,10 @@ include_directories(
 )
 add_subdirectory(lwip)
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    include_directories(
-        /usr/local/opt/libuv/include
-    )
-    link_directories(
-        /usr/local/opt/libuv/lib
-    )
-endif()
-if (WIN32)
-    add_dependencies(lan-play winpcap)
-endif()
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 if (WIN32)
     include(ExternalProject)
+    add_dependencies(lan-play winpcap)
     ExternalProject_Add(
         winpcap
         PREFIX ${CMAKE_BINARY_DIR}/winpcap
@@ -67,18 +56,17 @@ if (WIN32)
         CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_DIR "" INSTALL_COMMAND ""
         # LOG_DOWNLOAD ON
     )
-    ExternalProject_Get_Property(winpcap SOURCE_DIR)
-    set(PCAP_ROOT_DIR ${SOURCE_DIR})
-    set(PCAP_INCLUDE_DIR ${SOURCE_DIR}/Include)
-    set(PCAP_LIBRARY ${SOURCE_DIR}/Lib/x64/wpcap.lib ${SOURCE_DIR}/Lib/wpcap.lib)
-    message("PCAP_ROOT_DIR = ${PCAP_ROOT_DIR} INCLUDE = ${PCAP_INCLUDE_DIR}")
-else()
-    include(cmake/FindPCAP.cmake)
+    ExternalProject_Get_Property(winpcap WINPCAP_SOURCE_DIR)
+    set(PCAP_ROOT_DIR ${WINPCAP_SOURCE_DIR})
+endif()
+find_package(PCAP)
+if (PCAP_FOUND)
+    include_directories(${PCAP_INCLUDE_DIR})
 endif()
 find_package(Libuv)
 if (LIBUV_FOUND)
     include_directories(${LIBUV_INCLUDE_DIR})
-endif (LIBUV_FOUND)
+endif()
 
 set(SOURCE_FILES
     base/debug.c
@@ -104,17 +92,14 @@ target_link_libraries(lan-play lwip_lib)
 
 if (STATIC_LINKING)
     target_link_libraries(lan-play ${PCAP_LIBRARY} ${LIBUV_LIBRARIES} -static)
-    if (!ANDROID)
-        target_link_libraries(lan-play pthread -static)
-    endif()
 else()
-    target_link_libraries(lan-play ${PCAP_LIBRARY})
-
-    if (WIN32)
-        target_link_libraries(lan-play libuv.a ws2_32.lib iphlpapi.lib libwinpthread.a psapi userenv.lib)
-    else()
-        target_link_libraries(lan-play ${LIBUV_LIBRARIES} pthread)
-    endif()
+    target_link_libraries(lan-play ${PCAP_LIBRARY} ${LIBUV_LIBRARIES})
+endif()
+if (WIN32)
+    target_link_libraries(lan-play ws2_32.lib iphlpapi.lib libwinpthread.a psapi userenv.lib)
+endif()
+if (!ANDROID)
+    target_link_libraries(lan-play pthread -static)
 endif()
 
 INSTALL(TARGETS lan-play RUNTIME DESTINATION bin)
